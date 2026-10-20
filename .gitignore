@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.tmp/
+
+# Local design reviews, screenshots, and historical build snapshots.
+.impeccable/
+.review/
+
+# Local configuration and generated files.
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo

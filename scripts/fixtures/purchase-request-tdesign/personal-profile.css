@@ -1,0 +1,62 @@
+.personal-profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(260px, 1fr);
+  grid-template-areas: "welcome sidebar" "information sidebar" "usage sidebar";
+  gap: 16px;
+  align-items: start;
+}
+.profile-card.t-card { min-width: 0; border-radius: var(--td-radius-medium); }
+.profile-card .t-card__header { padding: 24px 24px 0; }
+.profile-card .t-card__body { padding: 24px; }
+.profile-card .t-card__title h2 { margin: 0; font-size: 16px; font-weight: 500; line-height: 24px; }
+.profile-welcome { grid-area: welcome; }
+.profile-welcome .t-card__body { padding: 20px 24px; }
+.profile-welcome-content { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; }
+.profile-welcome h2 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 500; }
+.profile-welcome p { margin: 0; color: var(--td-text-color-secondary); line-height: 24px; }
+.profile-information { grid-area: information; }
+.profile-information-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px 24px; margin: 8px 0 28px; }
+.profile-information-grid > div { min-width: 0; }
+.profile-information-grid dt { margin-bottom: 12px; color: var(--td-text-color-secondary); line-height: 22px; }
+.profile-information-grid dd { margin: 0; line-height: 24px; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.profile-note { margin: 0; padding-top: 20px; border-top: 1px solid var(--td-component-stroke); color: var(--td-text-color-secondary); font-size: 12px; line-height: 20px; }
+.profile-usage { grid-area: usage; }
+.profile-usage-empty { display: grid; place-items: center; min-height: 280px; }
+.profile-usage-empty .t-empty { max-width: 100%; }
+.profile-usage-empty .t-empty__description { max-width: 360px; line-height: 22px; margin-inline: auto; }
+.profile-sidebar { grid-area: sidebar; display: grid; gap: 16px; min-width: 0; }
+.profile-identity.t-card { background: var(--td-brand-color-7); color: #fff; }
+.profile-identity-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.profile-identity .t-avatar { flex-shrink: 0; box-shadow: 0 0 0 4px rgb(255 255 255 / 18%); }
+.profile-avatar-action.t-button { color: #fff; width: 36px; height: 36px; flex-shrink: 0; }
+.profile-avatar-action.t-button:hover { background: rgb(255 255 255 / 15%); }
+.profile-avatar-action.t-button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.profile-identity h2 { margin: 32px 0 4px; font-size: 20px; line-height: 30px; font-weight: 500; color: inherit; }
+.profile-account-name { margin: 0; font-size: 14px; line-height: 22px; }
+.profile-position { margin: 16px 0 0; line-height: 24px; overflow-wrap: anywhere; }
+.profile-shortcuts .t-card__body { padding: 12px; }
+.profile-shortcuts .t-button { height: auto; min-height: 76px; justify-content: flex-start; text-align: left; padding: 12px; white-space: normal; }
+.profile-shortcuts .t-button__text { display: flex; align-items: center; gap: 12px; width: 100%; min-width: 0; }
+.profile-shortcut-icon { display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 36px; color: var(--td-brand-color); background: var(--td-brand-color-light); border-radius: var(--td-radius-default); }
+.profile-shortcut-icon .t-icon { font-size: 20px; }
+.profile-shortcut-copy { display: grid; gap: 4px; flex: 1; min-width: 0; line-height: 22px; }
+.profile-shortcut-copy small { color: var(--td-text-color-secondary); font-size: 12px; line-height: 20px; }
+.profile-shortcut-arrow { color: var(--td-text-color-placeholder); flex-shrink: 0; }
+@media (max-width: 1250px) {
+  .profile-information-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 1100px) {
+  .personal-profile-grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "welcome" "information" "sidebar" "usage"; }
+  .profile-sidebar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .profile-sidebar { grid-template-columns: minmax(0, 1fr); }
+  .profile-card .t-card__header { padding: 20px 20px 0; }
+  .profile-card .t-card__body { padding: 20px; }
+  .profile-shortcuts .t-card__body { padding: 8px; }
+  .profile-information-grid { gap: 24px 16px; }
+  .profile-usage-empty { min-height: 240px; }
+}
+@media (max-width: 380px) {
+  .profile-information-grid { grid-template-columns: minmax(0, 1fr); }
+}

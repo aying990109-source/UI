@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import ts from 'typescript';
+function load(file, dependencies = {}) {
+  const code = ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText;
+  const exports = {};
+  new Function('require', 'exports', code)(name => { assert.ok(name in dependencies, `Unexpected import: ${name}`); return dependencies[name]; }, exports);
+  return exports;
+}
+const { initialProcessingRows, applyProcessingAction, unsent, dispatchable, dispatched, returnable, allowedProcessingActions } = load('./replenishment-processing-data.ts', { './history': load('./history.ts') });
+let rows = initialProcessingRows(), first = rows[0];
+assert.equal(unsent(first), first.requested);
+assert.throws(() => applyProcessingAction(rows, first.id, 'dispatch', first.version, { quantity: 20 }), /当前阶段/);
+assert.throws(() => applyProcessingAction(rows, first.id, 'lock-failed', first.version), /原因/);
+rows = applyProcessingAction(rows, first.id, 'lock-confirm', first.version);
+first = rows[0]; assert.equal(first.stage, 'pending_labels');
+assert.throws(() => applyProcessingAction(rows, first.id, 'labels-confirm', 1), /版本/);
+rows = applyProcessingAction(rows, first.id, 'labels-confirm', first.version);
+first = rows[0];
+first = { ...first, cancellations: [{ id: `${first.id}-C1`, quantity: 20, status: 'pending', version: 1 }] };
+rows[0] = first;
+assert.equal(dispatchable(first), 100); assert.equal(unsent(first), 120);
+assert.throws(() => applyProcessingAction(rows, first.id, 'dispatch', first.version, { quantity: 120, warehouse: '洛杉矶仓', date: '2026-10-18' }), /扣除待取消/);
+rows = applyProcessingAction(rows, first.id, 'dispatch', first.version, { quantity: 40, warehouse: '洛杉矶仓', date: '2026-10-18' });
+first = rows[0]; assert.equal(first.stage, 'partial_dispatch'); assert.equal(dispatchable(first), 60);
+rows = applyProcessingAction(rows, first.id, 'dispatch', first.version, { quantity: 60, warehouse: '洛杉矶仓', date: '2026-10-18' });
+first = rows[0]; assert.equal(dispatched(first), 100); assert.equal(dispatchable(first), 0); assert.equal(unsent(first), 20);
+assert.throws(() => applyProcessingAction(rows, first.id, 'return', first.dispatches[0].version, { targetId: first.dispatches[0].id, quantity: 50, warehouse: '洛杉矶仓', evidence: 'proof.pdf' }), /该笔/);
+assert.throws(() => applyProcessingAction(rows, first.id, 'return', first.dispatches[0].version, { targetId: first.dispatches[0].id, quantity: 20, warehouse: '洛杉矶仓' }), /凭证/);
+rows = applyProcessingAction(rows, first.id, 'return', first.dispatches[0].version, { targetId: first.dispatches[0].id, quantity: 20, warehouse: '洛杉矶仓', evidence: 'proof.pdf' });
+first = rows[0]; assert.equal(returnable(first), 80);
+assert.throws(() => applyProcessingAction(rows, first.id, 'return', 1, { targetId: first.dispatches[0].id, quantity: 1, warehouse: '洛杉矶仓', evidence: 'proof.pdf' }), /版本/);
+rows = applyProcessingAction(rows, first.id, 'cancel-approve', first.cancellations[0].version, { targetId: first.cancellations[0].id });
+first = rows[0]; assert.equal(unsent(first), 0); assert.equal(first.stage, 'completed'); assert.equal(dispatched(first), 100);
+assert.deepEqual(allowedProcessingActions(first), ['return']);
+assert.ok(first.timeline.length >= 7);
+console.log('replenishment processing rules: passed');

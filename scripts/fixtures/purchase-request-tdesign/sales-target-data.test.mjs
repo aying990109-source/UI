@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+import ts from 'typescript';
+const load = (file, dependencies = {}) => { const code = ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText; const exports = {}; new Function('require', 'exports', code)(name => { assert.ok(name in dependencies, `Unexpected import: ${name}`); return dependencies[name]; }, exports); return exports; };
+const data = load('./sales-target-data.ts', { './history': load('./history.ts') });
+test('partial sales stays separate from complete and uncertain amounts never become zero', () => {
+  const rows = data.initialSaleMonths(), partial = rows.find(row => row.groupId === 'home' && row.month === 10), fx = rows.find(row => row.groupId === 'daily' && row.month === 9);
+  assert.equal(partial.formalCents, null); assert.ok(partial.partialCents > 0);
+  assert.equal(fx.formalCents, null); assert.equal(fx.partialCents, null); assert.equal(fx.contributions[0].currency, 'CAD');
+  const failedUpdate = rows.find(row => row.groupId === 'daily' && row.month === 10);
+  assert.equal(failedUpdate.state, 'source_failed'); assert.ok(failedUpdate.formalCents > 0);
+  const summary = data.saleSummary(rows.filter(row => row.month === 10));
+  assert.equal(summary.formalCents, null); assert.ok(summary.partialCents > 0); assert.equal(summary.complete, false);
+  assert.deepEqual(data.saleSummary([]), { formalCents: null, partialCents: null, complete: false, unknown: 0 });
+});
+test('target exact sum, revision mode, month lock and original target remain explicit', () => {
+  const plans = data.initialTargets(), old = plans[0];
+  assert.equal(old.startMonth, 10); assert.equal(old.months[10] + old.months[11] + old.months[12], old.totalCents);
+  const base = { groupId: old.groupId, year: old.year, total: '36000.00', months: { 10: '12000.00', 11: '13000.00', 12: '11000.00' }, mode: 'reallocate', reason: '季内重新分配', version: old.version };
+  const changed = data.saveTarget(plans, base)[0];
+  assert.equal(changed.totalCents, old.totalCents); assert.equal(changed.originalCents, old.originalCents); assert.equal(changed.version, old.version + 1);
+  assert.throws(() => data.saveTarget([changed], base), /版本/);
+  assert.throws(() => data.saveTarget(plans, { ...base, months: { 10: '11999.99', 11: '13000.00', 12: '11000.00' } }), /合计/);
+  assert.throws(() => data.saveTarget(plans, { ...base, mode: 'revise_total' }), /总额未变化/);
+  assert.throws(() => data.saveTarget(plans, { ...base, months: { 10: '13000.00', 11: '12000.00', 12: '11000.00' } }, '2026-11-18'), /锁定/);
+  assert.equal(data.targetProgress(old, data.initialSaleMonths()).formalCents, null);
+  const future = data.saveTarget([], { groupId: 'outdoor', year: 2027, total: '12000', months: Object.fromEntries(Array.from({ length: 12 }, (_, index) => [index + 1, '1000'])), mode: 'create', reason: '', version: 0 })[0];
+  assert.equal(data.targetProgress(future, []).formalCents, null); assert.equal(data.targetProgress(future, []).attainment, null);
+  assert.equal(data.targetSummary([future], [], 2027).attainment, null);
+  const completeOctober = { ...data.initialSaleMonths().find(row => row.groupId === old.groupId && row.month === 10), state: 'complete', formalCents: 100000, partialCents: 100000 };
+  assert.equal(data.targetProgress(old, [], 10).formalCents, null);
+  assert.equal(data.targetProgress(old, [completeOctober], 11).formalCents, null);
+});

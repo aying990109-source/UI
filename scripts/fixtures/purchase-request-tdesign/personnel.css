@@ -1,0 +1,77 @@
+.personnel-workspace { display: grid; grid-template-columns: 224px minmax(0, 1fr); min-height: 560px; background: var(--td-bg-color-container); border-radius: var(--td-radius-medium); }
+.personnel-organizations { min-width: 0; padding: 20px 16px; border-right: 1px solid var(--td-component-stroke); }
+.personnel-organizations-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.personnel-organizations h2, .personnel-heading h2 { margin: 0; font-size: 17px; line-height: 24px; font-weight: 500; }
+.personnel-organizations-toggle.t-button { display: none; }
+.personnel-tree-search { display: block; margin-bottom: 12px; }
+.personnel-all, .personnel-tree-node { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 4px 8px; border: 0; border-radius: var(--td-radius-default); background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.personnel-all { margin-bottom: 4px; padding-left: 32px; }
+.personnel-all:hover { background: var(--td-bg-color-container-hover); }
+.personnel-all[aria-pressed=true], .personnel-tree-node[aria-pressed=true] { color: var(--td-brand-color); background: var(--td-brand-color-light); font-weight: 500; }
+.personnel-node-name { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
+.personnel-count { margin-left: auto; flex: none; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--td-text-color-secondary); }
+.personnel-tree .t-tree__label { flex: 1; min-width: 0; padding: 0; }
+.personnel-tree .t-tree__item { min-height: 36px; height: auto; padding: 0 0 0 calc(var(--level) * 16px); }
+.personnel-tree .t-tree__icon { width: 32px; flex: 0 0 32px; }
+.personnel-tree-toggle { display: flex; align-items: center; justify-content: center; width: 32px; height: 36px; border: 0; background: transparent; color: var(--td-text-color-secondary); cursor: pointer; }
+.personnel-tree-toggle:disabled { cursor: default; }
+.personnel-tree-toggle .is-collapsed { transform: rotate(-90deg); }
+.personnel-tree button:focus-visible { outline: 2px solid var(--td-brand-color); outline-offset: -2px; }
+.personnel-tree-empty { margin: 12px 0; font-size: 12px; color: var(--td-text-color-secondary); }
+.personnel-organization-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--td-component-stroke); }
+.personnel-organization-actions .t-button { flex: 1; padding: 0 8px; }
+.personnel-content { min-width: 0; padding: 24px; }
+.personnel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.personnel-heading h2 { overflow-wrap: anywhere; }
+.personnel-heading p { margin: 8px 0 0; font-size: 12px; line-height: 20px; color: var(--td-text-color-secondary); }
+.personnel-parent { color: var(--td-text-color-secondary); font-weight: 400; }
+.personnel-heading-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+.personnel-department-meta { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: -8px 0 24px; font-size: 12px; line-height: 20px; color: var(--td-text-color-secondary); }
+.personnel-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; }
+.personnel-filters label { display: flex; flex: none; flex-direction: column; gap: 8px; min-width: 0; max-width: 240px; }
+.personnel-filters label:not(.personnel-keyword) { width: max-content; }
+.personnel-filters label:not(.personnel-keyword) .t-select__wrap { width: 100%; max-width: 100%; }
+.personnel-filters label:not(.personnel-keyword) .t-select-input,
+.personnel-filters label:not(.personnel-keyword) .t-input__wrap,
+.personnel-filters label:not(.personnel-keyword) .t-input { width: 100%; max-width: 100%; min-width: 0; }
+.personnel-filters label:not(.personnel-keyword) .t-input__inner { min-width: 0; max-width: 100%; text-overflow: ellipsis; }
+.personnel-filters .personnel-keyword { flex: 1 1 224px; max-width: none; min-width: 180px; }
+.personnel-filters label > span { font-size: 12px; color: var(--td-text-color-secondary); }
+.personnel-filters > .t-button { flex: none; }
+.personnel-results { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 24px 0 12px; font-size: 12px; color: var(--td-text-color-secondary); }
+.personnel-results [role=status] { color: var(--td-text-color-primary); }
+.personnel-table .t-table__content > table { min-width: 700px; }
+.personnel-table .cell-stack .t-button { height: 32px; }
+.personnel-pagination { margin-top: 24px; }
+.personnel-mobile-pagination { display: none; }
+.personnel-empty { padding: 48px 16px; }
+@media (max-width: 1120px) {
+  .personnel-workspace { grid-template-columns: 200px minmax(0, 1fr); }
+  .personnel-organizations { padding: 16px 12px; }
+  .personnel-content { padding: 20px; }
+  .personnel-heading { flex-wrap: wrap; }
+}
+@media (max-width: 900px) {
+  .personnel-workspace { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+  .personnel-organizations { border-right: 0; border-bottom: 1px solid var(--td-component-stroke); padding: 12px 16px; }
+  .personnel-organizations-heading { margin: 0; }
+  .personnel-organizations-toggle.t-button { display: inline-flex; }
+  .personnel-organizations.is-open .personnel-organizations-toggle .t-icon { transform: rotate(180deg); }
+  .personnel-organization-content { display: none; margin-top: 12px; }
+  .personnel-organizations.is-open .personnel-organization-content { display: block; }
+  .personnel-tree { max-height: 280px; overflow-y: auto; }
+  .personnel-organization-actions { margin-top: 16px; }
+}
+@media (max-width: 600px) {
+  .personnel-content { padding: 16px; }
+  .personnel-heading { gap: 12px; margin-bottom: 20px; }
+  .personnel-heading-actions { flex-shrink: 1; justify-content: flex-start; }
+  .personnel-filters { gap: 12px; }
+  .personnel-filters .personnel-keyword { flex-basis: 100%; }
+  .personnel-filters > label { min-width: 0; }
+  .personnel-pagination { display: none; }
+  .personnel-mobile-pagination { display: block; margin-top: 16px; }
+  .personnel-workspace .t-button, .personnel-all, .personnel-tree-node, .personnel-tree-toggle { min-height: 44px; }
+  .personnel-tree-toggle { width: 44px; }
+  .personnel-tree .t-tree__icon { width: 44px; flex-basis: 44px; }
+}

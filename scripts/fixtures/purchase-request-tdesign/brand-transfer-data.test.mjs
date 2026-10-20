@@ -1,0 +1,47 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+import ts from 'typescript';
+const load = (file, dependencies = {}) => { const code = ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText; const exports = {}; new Function('require', 'exports', code)(name => { assert.ok(name in dependencies, `Unexpected import: ${name}`); return dependencies[name]; }, exports); return exports; };
+const history = load('./history.ts'), csvLib = load('../../../src/lib/csv.ts'), brand = load('./brand-pricing-data.ts', { './history': history });
+let store;
+const storeProxy = new Proxy({}, { get: (_, key) => store?.[key] });
+const storeImport = load('./store-information-import.ts', { '../../../src/lib/csv': csvLib, './history': history, './store-information-data': storeProxy });
+store = load('./store-information-data.ts', { './history': history, './store-information-import': storeImport });
+const transfer = load('./brand-transfer-data.ts', { '../../../src/lib/csv': csvLib, './brand-pricing-data': brand, './store-information-data': store, './history': history });
+const csv = rows => rows.map(row => row.map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(',')).join('\r\n');
+test('shared authorization scope updates both matching US and CA sites with a version and history', () => {
+  const state = brand.initialBrandPricingState(), stores = store.initialStoreInformation(), first = state.brands[0], relation = state.relations[first.id][0];
+  const next = transfer.saveAuthorization(state, stores, { brandId: first.id, sid: 'BR-SID-US', status: '停用', date: '2026-10-18', version: relation.version || 1, reason: '人工核对' });
+  assert.equal(next.brands[0].authorizations.filter(row => row.scope === relation.scope && row.status === '停用').length, 2);
+  assert.equal(next.relations[first.id][0].version, 2);
+  assert.equal(next.brands[0].timeline.at(-1).label, '维护品牌授权');
+  assert.throws(() => transfer.saveAuthorization(next, stores, { brandId: first.id, sid: 'BR-SID-CA', status: '有效', date: '', version: 1 }), /版本/);
+});
+test('brand and authorization workbook previews allow failure columns but reject stale rows individually', () => {
+  const state = brand.initialBrandPricingState(), stores = store.initialStoreInformation(), row = state.brands[1];
+  const brandValues = [row.id, row.version, row.name, ...brand.brandFields.map(([key]) => row.profile[key] || ''), row.reconciled ? '已核对' : '待核对', row.reviewNote];
+  const edited = [...brandValues]; edited[transfer.brandWorkbookHeaders.indexOf('品牌类别')] = '22';
+  const stale = [...edited]; stale[1] = '99';
+  const plans = transfer.previewBrandWorkbook(state, csv([transfer.brandWorkbookHeaders, edited, stale]));
+  assert.equal(plans[0].errors.length, 0); assert.ok(plans[1].errors.length);
+  const committed = transfer.commitBrandWorkbook(state, plans, stores);
+  assert.equal(committed.state.brands[1].profile.category, '22'); assert.equal(committed.plans[0].done, true); assert.equal(committed.plans[1].done, false);
+  const authHeaders = [...transfer.authorizationWorkbookHeaders, '原始行号', '错误说明'];
+  const authPlans = transfer.previewAuthorizationWorkbook(state, stores, csv([authHeaders, [row.id, 'STORE-SID-004', '有效', '2026-10-18', '', '2', '失败修正']]));
+  assert.equal(authPlans[0].errors.length, 0);
+});
+test('authorization export selects a current covered SID after a site leaves and rejoins', () => {
+  const state = brand.initialBrandPricingState(), stores = store.initialStoreInformation(), brandId = state.brands[0].id;
+  const moved = stores.map(row => row.sid === 'BR-SID-CA' ? { ...row, profile: { ...row.profile, shortName: 'Moved' } } : row);
+  const exported = transfer.authorizationExportRows(state, moved);
+  const shared = exported.rows.find(row => row[0] === brandId && row[1] === 'BR-SID-US');
+  assert.ok(shared);
+  const preview = transfer.previewAuthorizationWorkbook(state, moved, csv([transfer.authorizationWorkbookHeaders, shared]));
+  assert.equal(preview[0].errors.length, 0);
+  const rejoined = transfer.authorizationExportRows(state, stores);
+  assert.ok(rejoined.rows.some(row => row[0] === brandId && row[1] === 'BR-SID-CA'));
+  const orphaned = moved.map(row => row.sid === 'BR-SID-US' ? { ...row, profile: { ...row.profile, shortName: 'Moved too' } } : row);
+  assert.ok(transfer.authorizationExportRows(state, orphaned).uncovered > 0);
+  assert.ok(state.relations[brandId].some(row => row.scope === 'americas:示例北区'));
+});

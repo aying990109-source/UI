@@ -1,0 +1,23 @@
+{
+  "name": "enterprise-operations-ui-preview",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5182 --strictPort",
+    "build": "tsc --noEmit --project scripts/fixtures/purchase-request-tdesign/tsconfig.json && vite build",
+    "test": "node scripts/run-tests.mjs"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "tdesign-icons-react": "0.6.11",
+    "tdesign-react": "1.18.3"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "@vitejs/plugin-react": "5.2.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.6"
+  }
+}

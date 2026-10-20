@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+import ts from 'typescript';
+const load = (file, dependencies = {}) => { const code = ts.transpileModule(readFileSync(new URL(file, import.meta.url), 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } }).outputText; const exports = {}; new Function('require', 'exports', code)(name => { assert.ok(name in dependencies, `Unexpected import: ${name}`); return dependencies[name]; }, exports); return exports; };
+const history = load('./history.ts'), csvLib = load('../../../src/lib/csv.ts'), view = load('../../../src/features/middle-data/store-group-view.ts');
+const middle = load('./middle-data.ts', { './history': history, '../../../src/lib/csv': csvLib, '../../../src/features/middle-data/store-group-view': view });
+const transfer = load('./store-group-transfer.ts', { '../../../src/lib/csv': csvLib, './middle-data': middle });
+const csv = rows => rows.map(row => row.map(value => `"${String(value ?? '').replaceAll('"', '""')}"`).join(',')).join('\r\n');
+test('group CSV validates whole batch and keeps source references safe', () => {
+  const state = middle.initialMiddleState(), first = state.stores[0], headers = transfer.groupCsvHeaders;
+  const valid = [first.sid, first.name, first.country, first.platform, first.groupId, 'A2', '启用', first.version, '等级调整'];
+  const invalid = [state.stores[4].sid, state.stores[4].name, state.stores[4].country, state.stores[4].platform, 'group-outdoor', state.stores[4].grade, '停用', state.stores[4].version, '跨组'];
+  const plans = transfer.previewGroupCsv(state, csv([headers, valid, invalid]));
+  assert.equal(plans[0].errors.length, 0); assert.ok(plans[1].errors.length);
+  assert.throws(() => transfer.commitGroupCsv(state, plans), /整批/);
+  assert.equal(state.stores[0].grade, first.grade);
+  const committed = transfer.commitGroupCsv(state, transfer.previewGroupCsv(state, csv([headers, valid])));
+  assert.equal(committed.stores.find(row => row.sid === first.sid).grade, 'A2');
+  assert.equal(state.stores.find(row => row.sid === first.sid).grade, first.grade);
+});
