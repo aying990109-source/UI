@@ -51,7 +51,17 @@ test('review edits retain earlier history, original values and the full adjustme
   assert.ok(saved.timeline.at(-1).comment.includes(reason));
   assert.equal(saved.timeline.at(-1).operator, '演示用户');
   assert.deepEqual(row, before, 'Saving must not rewrite prior records');
+  assert.equal(saved.approved, row.approved, 'Plan edits must retain the approved quantity');
   assert.deepEqual(data.saveReviewDetails(saved, { ...saved }).timeline, saved.timeline, 'Unchanged saves must not create events');
+});
+
+test('summary edits preserve approval and record the summary operation', () => {
+  const row = data.purchaseLines.find(row => !row.review && !row.ordered && row.executionCarton);
+  const saved = data.saveReviewDetails(row, { ...row, approved: 1, planned: row.planned + row.executionCarton, adjustmentReason: '整箱补足' });
+  assert.equal(saved.approved, row.approved);
+  assert.equal(saved.timeline.at(-1).label, '处理汇总明细');
+  assert.ok(saved.timeline.at(-1).comment.includes('整箱补足'));
+  assert.equal(data.remaining(saved), saved.planned - saved.ordered);
 });
 
 test('seeded ordered and remaining quantities retain whole cartons', () => {
@@ -61,6 +71,38 @@ test('seeded ordered and remaining quantities retain whole cartons', () => {
   }
   assert.equal(data.purchaseLines[12].ordered, 168);
   assert.equal(data.remaining(data.purchaseLines[12]), 192);
+});
+
+test('transport groups merge separated rows and total approved and planned quantities independently', () => {
+  const base = data.purchaseLines[12];
+  const rows = [
+    { ...base, id: 'sea-fba', transport: '普通海运', stockingType: 'FBA', approved: 360, planned: 384, ordered: 168 },
+    { ...base, id: 'express', transport: '快船', stockingType: 'FBA', approved: 24, planned: 48, ordered: 0 },
+    { ...base, id: 'sea-fbm', transport: '普通海运', stockingType: 'FBM', approved: 96, planned: 72, ordered: 24 },
+  ];
+  const before = structuredClone(rows);
+  const groups = data.groupTransportLines(rows);
+  assert.deepEqual(groups.map(group => group.label), ['快船', '普通海运']);
+  assert.deepEqual(groups.map(group => group.lines.map(row => row.id)), [['express'], ['sea-fba', 'sea-fbm']]);
+  assert.deepEqual(groups.map(({ approved, planned, fba, fbm }) => ({ approved, planned, fba, fbm })), [
+    { approved: 24, planned: 48, fba: 48, fbm: 0 },
+    { approved: 456, planned: 456, fba: 384, fbm: 72 },
+  ]);
+  assert.deepEqual(rows, before, 'Grouping must not reorder or modify source records');
+  assert.deepEqual(data.groupTransportLines([]), []);
+});
+
+test('domestic stock is not applicable and missing transport stays visibly separate', () => {
+  const base = data.purchaseLines[12];
+  const groups = data.groupTransportLines([
+    { ...base, id: 'domestic', stockPath: '国内备货', transport: '普通海运' },
+    { ...base, id: 'missing', stockPath: '发海外仓', transport: '' },
+    { ...base, id: 'sea', stockPath: '发海外仓', transport: '普通海运' },
+  ]);
+  assert.equal(groups.length, 3);
+  assert.equal(groups.find(group => group.label === '不适用').lines[0].id, 'domestic');
+  assert.equal(groups.find(group => group.label === '未填写').lines[0].id, 'missing');
+  assert.equal(groups.find(group => group.label === '普通海运').lines[0].id, 'sea');
 });
 
 test('preview preserves supplier/company/type boundaries and the remaining quantity', () => {
@@ -88,4 +130,20 @@ test('unreviewed, missing supplier/price/carton and empty selections cannot gene
     assert.deepEqual(data.previewOrders([{ ...ready, ...patch }], 1), []);
   }
   assert.deepEqual(data.previewOrders([], 1), []);
+});
+
+test('order transport totals use each order snapshot, including partial and subsequent orders', () => {
+  const source = data.purchaseLines[12];
+  const existing = data.initialOrders.find(order => order.lines.some(line => line.id === source.id));
+  const next = data.previewOrders([source], 50)[0];
+  for (const [order, expectedQuantity] of [[existing, 168], [next, 192]]) {
+    const groups = data.groupTransportLines(order.lines);
+    const group = groups.find(item => item.lines.some(line => line.id === source.id));
+    assert.equal(group.planned, expectedQuantity);
+    assert.equal(group.fba, expectedQuantity);
+    assert.equal(group.fbm, 0);
+    assert.equal(data.sum(group.lines, line => line.planned * line.price), expectedQuantity * 28);
+  }
+  assert.equal(source.planned, 360, 'Grouping orders must preserve the source plan');
+  assert.equal(source.ordered, 168);
 });

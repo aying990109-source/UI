@@ -37,10 +37,11 @@ export function LoginPreview({ onLogin, onBrowse, theme, onThemeChange }: { onLo
   };
 
   return <main className="preview-login" aria-labelledby="preview-login-title">
-    <header className="preview-login-brand"><img src={`${import.meta.env.BASE_URL}workbench-mark.svg`} width="36" height="26" alt="XD" /><span>企业运营工作台</span><ThemeToggle value={theme} onChange={onThemeChange} /></header>
+    <div className="preview-login-toolbar"><ThemeToggle value={theme} onChange={onThemeChange} /></div>
     <div className="preview-login-center">
       <section className="preview-login-form-area">
-        <h1 id="preview-login-title">登录到<br />企业运营工作台</h1>
+        <header className="preview-login-brand"><img src={`${import.meta.env.BASE_URL}workbench-mark.svg`} width="40" height="28" alt="XD" /><span>workbench</span></header>
+        <h1 id="preview-login-title">欢迎回来</h1>
         <p className="preview-login-description">使用分配的企业账号登录</p>
         <form noValidate onSubmit={event => { event.preventDefault(); submit(); }}>
           <div className="preview-login-field">
@@ -64,6 +65,9 @@ export function LoginPreview({ onLogin, onBrowse, theme, onThemeChange }: { onLo
         </div>}
       </section>
     </div>
-    <footer className="preview-login-footer"><span>企业运营工作台</span><span>交互样板 · 请勿输入真实账号或密码</span></footer>
+    <aside className="preview-login-visual" aria-label="寄语">
+      <p className="preview-login-quote"><span>奇迹，从来不只在</span><span>它发生的瞬间。</span></p>
+    </aside>
+    <footer className="preview-login-footer">交互样板 · 请勿输入真实账号或密码</footer>
   </main>;
 }

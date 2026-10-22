@@ -1,0 +1,9 @@
+{
+  "purpose": "2026-10-22 已确认登录页右侧静态装饰背景；文案由页面 DOM 单独呈现。",
+  "generator": "Built-in image_gen.imagegen",
+  "reference": "docs/design-references/login-workbench-20261022/approved.png",
+  "generatedSource": "exec-37b5ed17-630e-4f82-9ef0-b48ffa69580e.png",
+  "prompt": "Use case: precise-object-edit / background extraction. The attached approved login design contains a white form on the left and a tall dark abstract backdrop on the RIGHT 36%. We need ONLY that right-hand background as a production website asset, with all text removed. Extract and reconstruct the right panel as a single full-bleed portrait image at approximately 640 x 1120 (aspect ratio about 0.57). Preserve its actual soft atmosphere and arrangement: muted slate blue and cool blue-grey luminous upper region, blue-grey broad softly blurred curving shadow band sweeping diagonally through the center, a deep navy shadow along the left-middle, dark grey-black lower part, almost black bottom. Maintain the restrained low saturation and smooth unfocused abstract shading of the reference. No sharp shapes. Remove the quote entirely and fill behind it naturally. Output ONLY the background, edge to edge. NO text, NO logo, NO symbols, NO white form region, NO UI, NO border, NO typography, NO watermark, NO new objects. The result should look like a clean text-free version of the approved right panel, not a redesigned artwork.",
+  "encoding": { "format": "webp", "width": 840, "height": 1471, "quality": 85, "bytes": 10812 },
+  "display": "CSS center/cover; saturate(.65); no animation."
+}

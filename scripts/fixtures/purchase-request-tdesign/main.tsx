@@ -10,6 +10,7 @@ import { PurchaseRequestDetails, type PurchaseRequestDetailsHandle } from './Pur
 import { PreviewDialog } from './PreviewDialog';
 import { ProcessingPages } from './ProcessingPages';
 import { PurchaseRouteCell, purchaseRouteTitle } from './PurchaseRouteCell';
+import { CopyableText } from './CopyableText';
 import { processingPages } from './processing-data';
 import { ShippingPages } from './ShippingPages';
 import { shippingPages } from './shipping-data';
@@ -132,6 +133,10 @@ export default function App() {
   const [applied, setApplied] = useState(emptyFilters);
   const [stage, setStage] = useState('全部申请');
   const [selected, setSelected] = useState<(string | number)[]>([]);
+  const [batchAction, setBatchAction] = useState<'approve' | 'reject' | null>(null);
+  const [batchNote, setBatchNote] = useState('');
+  const batchVerb = batchAction === 'approve' ? '通过' : '驳回';
+  const openBatch = (action: 'approve' | 'reject') => { setBatchNote(''); setBatchAction(action); };
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [mineOnly, setMineOnly] = useState(false);
@@ -184,13 +189,13 @@ export default function App() {
   const columns: PrimaryTableCol<RequestRow>[] = [
     { colKey: 'row-select', type: 'multiple', width: 40, fixed: 'left', checkProps: ({ row }) => ({ title: `选择 ${row.id}`, label: <span className="sr-only">选择 {row.id}</span> }) },
     { colKey: 'id', title: '采购单号 / 申请日期', width: 160, cell: ({ row }) => <div className="cell-stack"><Button variant="text" theme="primary" onClick={() => showDetail(row)}>{row.id}</Button><span className="secondary numeric">{row.date}</span></div> },
-    { colKey: 'product', title: '采购商品', width: 180, cell: ({ row }) => <div className="cell-stack"><span className="product-name">{row.product}</span><span className="secondary">{row.color} <span className="cell-dot">·</span> {row.carton ? `${row.carton} 件/箱` : '装箱数待采购确认'}</span></div> },
+    { colKey: 'product', title: '采购商品', width: 216, cell: ({ row }) => <div className="cell-stack purchase-product-cell"><CopyableText label="品名" value={row.product} className="product-name" /><span className="secondary">{row.color} <span className="cell-dot">·</span> {row.carton ? `${row.carton} 件/箱` : '装箱数待采购确认'}</span></div> },
     { colKey: 'quantity', title: '当前采购量', align: 'right', width: 108, sorter: (a, b) => a.quantity - b.quantity, cell: ({ row }) => <span className="numeric quantity">{number(row.quantity)} <small>件</small></span> },
     { colKey: 'purchaseType', title: purchaseRouteTitle, width: 154, cell: ({ row }) => <PurchaseRouteCell row={row} /> },
     { colKey: 'applicant', title: '申请人 / 所属小组', width: 110, cell: ({ row }) => <div className="cell-stack"><span>{row.applicant}</span><span className="secondary">{row.group}</span></div> },
     { colKey: 'status', title: '状态', width: 88, cell: ({ row }) => <Tag theme={stageTheme[row.status]} variant="light" size="small">{row.status}</Tag> },
     { colKey: 'remark', title: '备注', width: 200, ellipsis: true, cell: ({ row }) => row.remark.trim() || '—' },
-    { colKey: 'actions', title: '操作', width: narrow ? 112 : 176, fixed: 'right', cell: ({ row }) => {
+    { colKey: 'actions', title: <div className="purchase-actions-heading"><span>操作</span>{selected.length > 0 && <div className="purchase-batch-actions"><Button type="button" size="small" variant="text" theme="primary" onClick={() => openBatch('approve')}>批量通过</Button><Button type="button" size="small" variant="text" theme="danger" onClick={() => openBatch('reject')}>批量驳回</Button></div>}</div>, width: narrow ? 112 : 216, fixed: 'right', cell: ({ row }) => {
       const busy = busyKeys.some(key => key.endsWith(`:${row.id}`));
       return <div className="purchase-action-cell" onClick={event => event.stopPropagation()}><div className="purchase-row-actions"><Button variant="text" onClick={() => showDetail(row)}>详情</Button>{row.awaitingMyApproval && (narrow ? <MobileApprovalMenu row={row} busy={busy} approving={busyKeys.includes(`approve:${row.id}`)} error={!!approvalErrors[row.id]} onApprove={approve} onReject={startReject} /> : <><Button variant="text" theme="primary" loading={busyKeys.includes(`approve:${row.id}`)} disabled={busy} onClick={() => approve(row)}>{approvalErrors[row.id] ? '重试' : '通过'}</Button><Button variant="text" theme="danger" disabled={busy} onClick={() => startReject(row)}>驳回</Button></>)}</div>{approvalErrors[row.id] && <span className="purchase-action-error" role="alert">{approvalErrors[row.id]}</span>}</div>;
     } },
@@ -275,6 +280,9 @@ export default function App() {
     </main>
     {showForm && <RequestForm onClose={closeForm} onCreate={row => { setRows([row, ...rows]); reset(); closeForm(); void MessagePlugin.success(`示例申请 ${row.id} 已提交`); }} />}
     <PurchaseRequestDetails ref={details} onApprove={approve} onReject={startReject} busyKeys={busyKeys} errors={approvalErrors} rejectionOpen={!!rejectRow} />
+    {batchAction && <PreviewDialog title={`批量${batchVerb}`} width={520} className="purchase-reject-dialog" initialFocus={batchAction === 'reject' ? 'textarea' : undefined} onClose={() => setBatchAction(null)} footer={<div className="purchase-reject-footer"><span>仅演示界面反馈</span><div><Button variant="outline" onClick={() => setBatchAction(null)}>取消</Button><Button theme={batchAction === 'reject' ? 'danger' : 'primary'} onClick={() => { void MessagePlugin.success(`已演示批量${batchVerb} ${selected.length} 条申请，列表状态保持不变`); setBatchAction(null); }}>确认{batchVerb}</Button></div></div>}>
+      <div className="purchase-reject-body"><p><strong>确认{batchVerb}选中的 {selected.length} 条采购申请？</strong><span>本次操作不会改变申请状态。</span></p>{batchAction === 'reject' && <label><span>备注（选填）</span><Textarea value={batchNote} onChange={setBatchNote} maxlength={2000} autosize={{ minRows: 4, maxRows: 4 }} placeholder="填写统一的驳回原因，便于申请人查看" aria-label="批量驳回备注" /></label>}</div>
+    </PreviewDialog>}
     {rejectRow && <PreviewDialog title="驳回申请" width={480} className="purchase-reject-dialog" initialFocus="textarea" returnFocus={() => document.querySelector<HTMLElement>('.detail-drawer .purchase-detail-footer .t-button--theme-danger')} onClose={closeReject} footer={<div className="purchase-reject-footer">{discardNote ? <><span>放弃已填写的备注？</span><div><Button variant="outline" onClick={() => setDiscardNote(false)}>继续填写</Button><Button theme="danger" onClick={() => { setRejectRow(null); setDiscardNote(false); }}>放弃填写</Button></div></> : <><span>仅演示界面反馈，不写入真实申请</span><div><Button variant="outline" disabled={busyKeys.includes(`reject:${rejectRow.id}`)} onClick={closeReject}>取消</Button><Button theme="danger" loading={busyKeys.includes(`reject:${rejectRow.id}`)} disabled={busyKeys.includes(`reject:${rejectRow.id}`)} onClick={confirmReject}>确认驳回</Button></div></>}</div>}>
       <div className="purchase-reject-body"><p><strong>{rejectRow.id}</strong><span>{rejectRow.product}</span></p><label><span>备注（选填）</span><Textarea value={rejectNote} onChange={value => { setRejectNote(value); setDiscardNote(false); }} maxlength={2000} autosize={{ minRows: 4, maxRows: 4 }} placeholder="填写驳回原因，便于申请人查看" aria-label="驳回备注" /></label>{rejectError && <p className="purchase-action-error" role="alert">{rejectError}</p>}</div>
     </PreviewDialog>}

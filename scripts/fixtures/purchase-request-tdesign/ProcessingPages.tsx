@@ -2,12 +2,12 @@ import { CsvImportButton } from './FileTransferActions';
 import { ListFilterToolbar } from './ListFilterToolbar';
 import { PurchaseRouteCell, purchaseRouteTitle } from './PurchaseRouteCell';
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, DateRangePicker, Empty, Input, InputNumber, MessagePlugin, PrimaryTable, Select, Tabs, Tag, Textarea, Tooltip } from 'tdesign-react';
+import { Alert, Button, DatePicker, DateRangePicker, Empty, Input, InputNumber, MessagePlugin, PrimaryTable, Select, Tabs, Tag, Textarea, Tooltip } from 'tdesign-react';
 import type { PrimaryTableCol } from 'tdesign-react';
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon, DownloadIcon, SearchIcon } from 'tdesign-icons-react';
 import { PreviewDialog } from './PreviewDialog';
 import { DetailDrawer } from './DetailDrawer';
-import { companies, demandStatus, exportDemo, groupLines, initialOrders, missingFields, money, previewOrders, processingPages, purchaseLines, quantity, remaining, saveReviewDetails, sum, suppliers } from './processing-data';
+import { companies, demandStatus, exportDemo, groupLines, groupTransportLines, initialOrders, missingFields, money, previewOrders, processingPages, purchaseLines, quantity, remaining, saveReviewDetails, sum, suppliers } from './processing-data';
 import type { DemoOrder, ProcessingPage, PurchaseGroup, PurchaseLine } from './processing-data';
 import { createEvent } from './history';
 
@@ -15,7 +15,7 @@ const options = (values: string[]) => values.map(value => ({ label: value, value
 const emptyFilters = { query: '', type: '', supplier: '', dates: [] as string[] };
 const badge = (text: string) => <Tag size="small" variant="light" theme={['已下单', '资料齐全', '可下单', '已入国内仓'].includes(text) ? 'success' : ['待补充', '待确认', '部分下单'].includes(text) ? 'warning' : 'primary'}>{text}</Tag>;
 const productCell = (row: PurchaseLine) => <div className="cell-stack"><span className="product-name">{row.product}</span><span className="secondary">{row.color} · {row.executionCarton ? `${row.executionCarton} 件/箱` : '装箱数待确认'}</span></div>;
-type ModalState = { kind: 'detail' | 'edit' | 'reject'; row: PurchaseLine } | { kind: 'approve'; rows: PurchaseLine[] } | { kind: 'preview'; rows: PurchaseLine[] };
+type ModalState = { kind: 'detail' | 'edit' | 'reject' | 'history'; row: PurchaseLine } | { kind: 'approve'; rows: PurchaseLine[] } | { kind: 'preview'; rows: PurchaseLine[] };
 
 export function ProcessingPages({ active, narrow }: { active: string; narrow: boolean }) {
   const [lines, setLines] = useState(purchaseLines);
@@ -25,13 +25,14 @@ export function ProcessingPages({ active, narrow }: { active: string; narrow: bo
   const proposed = modal?.kind === 'preview' ? previewOrders(modal.rows, orders.length + 1) : [];
   return <>
     {(Object.keys(processingPages) as ProcessingPage[]).map(kind => <div hidden={active !== kind} key={kind}>
-      <ProcessingList kind={kind} lines={lines} orders={orders} onModal={setModal} narrow={narrow} />
+      <ProcessingList kind={kind} lines={lines} orders={orders} onModal={setModal} narrow={narrow} onDeliveryChange={(id, delivery) => setOrders(current => current.map(order => order.id === id ? { ...order, delivery } : order))} />
     </div>)}
-    {modal?.kind === 'edit' && <ReviewEditor row={modal.row} onClose={close} onSave={next => { const saved = saveReviewDetails(modal.row, next); setLines(current => current.map(row => row.id === next.id ? saved : row)); close(); void MessagePlugin.success('示例复审资料已保存'); }} />}
-    {modal?.kind === 'detail' && <DetailDrawer title="采购需求详情" timeline={modal.row.timeline} onClose={close}>
-      <div className="detail-content"><div className="detail-title"><div><h2>{modal.row.product}</h2><span className="secondary">{modal.row.id} · {modal.row.date}</span></div>{badge(modal.row.review ? '待复审' : demandStatus(modal.row))}</div>
+    {modal?.kind === 'edit' && <ReviewEditor row={modal.row} onClose={close} onSave={next => { const saved = saveReviewDetails(modal.row, next); setLines(current => current.map(row => row.id === next.id ? saved : row)); close(); void MessagePlugin.success(modal.row.review ? '示例复审资料已保存' : '示例采购明细已保存'); }} />}
+    {modal?.kind === 'history' && <DetailDrawer title={`处理记录 · ${modal.row.id}`} timeline={modal.row.timeline} timelineTitle="处理记录" onClose={close} size="560px" className="purchase-history-drawer"><div className="cell-stack"><strong>{modal.row.product}</strong><span className="secondary">{modal.row.color} · {modal.row.supplier}</span></div></DetailDrawer>}
+    {modal?.kind === 'detail' && <DetailDrawer title="采购需求详情" timeline={modal.row.timeline} onClose={close} size="1080px" className="purchase-detail-drawer">
+      <div className="detail-content purchase-detail-content"><div className="detail-title"><div><h2>{modal.row.product}</h2><span className="secondary">{modal.row.id} · {modal.row.date}</span></div>{badge(modal.row.review ? '待复审' : demandStatus(modal.row))}</div>
         <h3>数量进度</h3><div className="quantity-overview">{[['申请', modal.row.quantity], ['计划', modal.row.planned], ['已下单', modal.row.ordered], ['未下单', remaining(modal.row)]].map(([label, value]) => <div key={label}><span>{label}</span><strong>{quantity(Number(value))}<small> 件</small></strong></div>)}</div>
-        <h3>采购与去向</h3><dl>{[['供应商', modal.row.supplier || '待补充'], ['采购单价', modal.row.price == null ? '待补充' : money(modal.row.price)], ['采购方', modal.row.company], ['采购类型', modal.row.purchaseType], ['站点 / 备货类型', `${modal.row.site} / ${modal.row.stockingType}`], ['货物路径', modal.row.stockPath], ['申请运输方式', modal.row.transport], ['申请人', `${modal.row.applicant} · ${modal.row.group}`], ['申请备注', modal.row.remark || '—'], ['数量调整原因', modal.row.adjustmentReason || '—']].map(([label, value]) => <div className="detail-pair" key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
+        <h3>采购与去向</h3><dl className="purchase-fields">{[['供应商', modal.row.supplier || '待补充'], ['采购单价', modal.row.price == null ? '待补充' : money(modal.row.price)], ['采购方', modal.row.company], ['采购类型', modal.row.purchaseType], ['站点 / 备货类型', `${modal.row.site} / ${modal.row.stockingType}`], ['货物路径', modal.row.stockPath], ['申请运输方式', modal.row.transport], ['申请人', `${modal.row.applicant} · ${modal.row.group}`], ['申请备注', modal.row.remark || '—'], ['数量调整原因', modal.row.adjustmentReason || '—']].map(([label, value]) => <div className={`purchase-field${label === '申请备注' || label === '数量调整原因' ? ' purchase-field-wide' : ''}`} key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
       </div>
     </DetailDrawer>}
     {modal?.kind === 'approve' && <PreviewDialog title="确认通过复审" width={760} onClose={close} footer={<div className="form-footer"><span>共 {modal.rows.length} 条采购申请</span><div><Button variant="outline" onClick={close}>取消</Button><Button theme="primary" onClick={() => { close(); void MessagePlugin.success('已演示通过复审，列表数据保持不变'); }}>确认通过（{modal.rows.length}）</Button></div></div>}>
@@ -47,18 +48,55 @@ export function ProcessingPages({ active, narrow }: { active: string; narrow: bo
   </>;
 }
 
-function LineItems({ rows, mode, onDetail }: { rows: PurchaseLine[]; mode: 'review' | 'summary' | 'order'; onDetail?: (row: PurchaseLine) => void }) {
-  const columns: PrimaryTableCol<PurchaseLine>[] = [
-    { colKey: 'product', title: '品名 / 颜色', width: 200, cell: ({ row }) => productCell(row) },
-    { colKey: 'site', title: '站点 / 去向', width: 136, cell: ({ row }) => <div className="cell-stack"><span>{row.site} · {row.stockingType}</span><span className="secondary">{row.stockPath} · {row.transport}</span></div> },
-    { colKey: 'planned', title: mode === 'summary' ? '未下单数量' : '计划数量', width: 104, align: 'right', cell: ({ row }) => <span className="numeric">{quantity(mode === 'summary' ? remaining(row) : row.planned)}</span> },
-    { colKey: 'price', title: '采购单价', width: 100, align: 'right', cell: ({ row }) => <span className="numeric">{row.price == null ? '待补充' : money(row.price)}</span> },
-    { colKey: 'source', title: '来源申请', width: 176, cell: ({ row }) => <div className="cell-stack">{onDetail ? <Button variant="text" theme="primary" onClick={() => onDetail(row)}>{row.id}</Button> : <span>{row.id}</span>}<span className="secondary">{row.applicant} · {row.group}</span></div> },
+type GroupedLineItem = { id: string; kind: 'group'; group: ReturnType<typeof groupTransportLines>[number] } | { id: string; kind: 'line'; line: PurchaseLine };
+
+function LineItems({ rows, mode, onDetail, onEdit, onHistory }: { rows: PurchaseLine[]; mode: 'review' | 'summary' | 'order'; onDetail?: (row: PurchaseLine) => void; onEdit?: (row: PurchaseLine) => void; onHistory?: (row: PurchaseLine) => void }) {
+  const [collapsedTransports, setCollapsedTransports] = useState<string[]>([]);
+  const grouped = mode !== 'review';
+  const columns: (PrimaryTableCol<PurchaseLine> & { title: string })[] = [
+    { colKey: 'product', title: grouped ? '品名 / 颜色 / 装箱数' : '品名 / 颜色', width: grouped ? 220 : 200, cell: ({ row }) => productCell(row) },
+    ...(grouped ? [
+      { colKey: 'planned', title: mode === 'order' ? '本单数量' : '批准 / 计划', width: 128, align: 'right', cell: ({ row }) => mode === 'order' ? <span className="numeric">{quantity(row.planned)} 件</span> : <div className="cell-stack align-end"><span className="numeric">{quantity(row.approved)} / {quantity(row.planned)}</span><span className="secondary numeric">未下单 {quantity(remaining(row))} 件</span></div> },
+      { colKey: 'channel', title: 'FBA / FBM', width: 104, align: 'right', cell: ({ row }) => <span className="numeric">{quantity(row.stockingType === 'FBA' ? row.planned : 0)} / {quantity(row.stockingType === 'FBM' ? row.planned : 0)}</span> },
+    ] satisfies PrimaryTableCol<PurchaseLine>[] : [
+      { colKey: 'site', title: '站点 / 去向', width: 136, cell: ({ row }) => <div className="cell-stack"><span>{row.site} · {row.stockingType}</span><span className="secondary">{row.stockPath} · {row.transport}</span></div> },
+      { colKey: 'planned', title: '计划数量', width: 104, align: 'right', cell: ({ row }) => <span className="numeric">{quantity(row.planned)}</span> },
+    ] satisfies PrimaryTableCol<PurchaseLine>[]),
+    { colKey: 'price', title: '采购单价', width: grouped ? 88 : 100, align: 'right', cell: ({ row }) => <span className="numeric">{row.price == null ? '待补充' : money(row.price)}</span> },
+    ...(grouped ? [
+      ...(mode === 'order' ? [{ colKey: 'amount', title: '采购金额', width: 112, align: 'right', cell: ({ row }) => <span className="numeric">{row.price == null ? '待确认' : money(row.planned * row.price)}</span> }] satisfies PrimaryTableCol<PurchaseLine>[] : [{ colKey: 'status', title: '异常 / 状态', width: 112, cell: ({ row }) => { const missing = missingFields(row); return <div className="cell-stack">{missing.map(field => <span className="pending-field" key={field}>{field}待补充</span>)}{badge(missing.length ? '待确认' : row.ordered > 0 ? demandStatus(row) : '可下单')}</div>; } }] satisfies PrimaryTableCol<PurchaseLine>[]),
+      { colKey: 'site', title: '站点 / 路径', width: 136, cell: ({ row }) => <div className="cell-stack"><span>{row.site} · {row.stockPath}</span><span className="secondary">{row.transport}</span></div> },
+    ] satisfies PrimaryTableCol<PurchaseLine>[] : []),
+    { colKey: 'source', title: '来源申请', width: grouped ? 156 : 176, cell: ({ row }) => <div className="cell-stack">{onDetail ? <Button variant="text" theme="primary" onClick={() => onDetail(row)}>{row.id}</Button> : <span>{row.id}</span>}<span className="secondary">{row.applicant} · {row.group}</span></div> },
+    ...(grouped ? [{ colKey: 'action', title: '操作', width: 128, fixed: 'right', cell: ({ row }) => <div className="row-buttons purchase-line-actions">{mode === 'summary' && <Tooltip content={row.ordered > 0 ? '已有下单数量，采购资料已锁定' : '处理采购明细'}><span><Button variant="text" theme="primary" disabled={row.ordered > 0} aria-label={`处理 ${row.id}`} onClick={() => onEdit?.(row)}>处理</Button></span></Tooltip>}{onHistory && <Button variant="text" theme="primary" aria-label={`处理记录 ${row.id}`} onClick={() => onHistory(row)}>处理记录</Button>}</div> }] satisfies PrimaryTableCol<PurchaseLine>[] : []),
   ];
+  if (grouped) {
+    const groupedRows = groupTransportLines(rows).flatMap<GroupedLineItem>(group => [
+      { id: `transport:${group.label}`, kind: 'group', group },
+      ...(collapsedTransports.includes(group.label) ? [] : group.lines.map<GroupedLineItem>(line => ({ id: line.id, kind: 'line', line }))),
+    ]);
+    const groupedColumns: PrimaryTableCol<GroupedLineItem>[] = columns.map(column => ({
+      colKey: column.colKey, title: column.title, width: column.width, align: column.align, fixed: column.fixed,
+      cell: ({ row, rowIndex, colIndex }) => {
+        if (row.kind === 'line') return typeof column.cell === 'function' ? column.cell({ row: row.line, rowIndex, colIndex, col: column }) : column.cell;
+        const group = row.group;
+        if (column.colKey === 'product') return <div className="purchase-transport-label"><span>{group.label}</span><span className="secondary">{group.lines.length} 条明细</span></div>;
+        if (column.colKey === 'planned') return <span className="numeric">{mode === 'order' ? `${quantity(group.planned)} 件` : `${quantity(group.approved)} / ${quantity(group.planned)}`}</span>;
+        if (column.colKey === 'channel') return <span className="numeric">{quantity(group.fba)} / {quantity(group.fbm)}</span>;
+        if (column.colKey === 'amount') return <span className="numeric">{group.lines.some(line => line.price == null) ? '待确认' : money(sum(group.lines, line => line.planned * (line.price ?? 0)))}</span>;
+        if (column.colKey === 'action') {
+          const collapsed = collapsedTransports.includes(group.label);
+          return <Button className="purchase-transport-toggle" size="small" variant="text" theme="primary" suffix={collapsed ? <ChevronDownIcon /> : <ChevronUpIcon />} aria-expanded={!collapsed} aria-label={`${collapsed ? '展开' : '收起'} ${group.label} 运输分组`} onClick={() => setCollapsedTransports(current => current.includes(group.label) ? current.filter(label => label !== group.label) : [...current, group.label])}>{collapsed ? '展开' : '收起'}</Button>;
+        }
+        return null;
+      },
+    }));
+    return <div className="line-items-scroll purchase-line-items" tabIndex={0} role="region" aria-label="按运输方式分组的采购明细，可横向滚动"><PrimaryTable rowKey="id" data={groupedRows} columns={groupedColumns} size="small" tableLayout="fixed" hover cellEmptyContent="" rowClassName={({ row }) => row.kind === 'group' ? 'purchase-transport-row' : ''} rowspanAndColspan={({ row, colIndex }) => row.kind === 'group' && colIndex === (mode === 'order' ? 5 : 3) ? { colspan: mode === 'order' ? 2 : 4 } : {}} /></div>;
+  }
   return <div className="line-items-scroll" tabIndex={0} role="region" aria-label="采购商品明细，可横向滚动"><PrimaryTable rowKey="id" data={rows} columns={columns} size="small" tableLayout="fixed" hover /></div>;
 }
 
-function ProcessingList({ kind, lines, orders, onModal, narrow }: { kind: ProcessingPage; lines: PurchaseLine[]; orders: DemoOrder[]; onModal: (modal: ModalState) => void; narrow: boolean }) {
+function ProcessingList({ kind, lines, orders, onModal, narrow, onDeliveryChange }: { kind: ProcessingPage; lines: PurchaseLine[]; orders: DemoOrder[]; onModal: (modal: ModalState) => void; narrow: boolean; onDeliveryChange: (id: string, delivery: string) => void }) {
   const [filters, setFilters] = useState(emptyFilters), [applied, setApplied] = useState(emptyFilters);
   const [stage, setStage] = useState('全部'), [selected, setSelected] = useState<(string | number)[]>([]);
   const [expanded, setExpanded] = useState<(string | number)[]>([]), [page, setPage] = useState(1), [pageSize, setPageSize] = useState(10);
@@ -99,7 +137,7 @@ function ProcessingList({ kind, lines, orders, onModal, narrow }: { kind: Proces
       { colKey: 'status', title: '采购状态', width: 100, cell: ({ row }) => badge(demandStatus(row)) },
       { colKey: 'site', title: '类型 / 站点', width: 130, cell: ({ row }) => <div className="cell-stack"><span>{row.purchaseType}</span><span className="secondary">{row.site} · {row.stockingType} · {row.applicant}</span></div> },
     ] satisfies PrimaryTableCol<PurchaseLine>[]),
-    { colKey: 'action', title: '操作', fixed: 'right', width: kind === 'review' ? narrow ? 112 : 208 : 72, cell: ({ row }) => {
+    { colKey: 'action', title: kind === 'review' ? <div className="purchase-actions-heading"><span>操作</span>{pickedLines.length > 0 && <div className="purchase-batch-actions"><Button type="button" size="small" variant="text" theme="primary" disabled={blocked} onClick={() => onModal({ kind: 'approve', rows: pickedLines })}>批量通过</Button></div>}</div> : '操作', fixed: 'right', width: kind === 'review' ? narrow ? 112 : 208 : 72, cell: ({ row }) => {
       const missing = missingFields(row);
       return <div className={kind === 'review' ? 'purchase-row-actions review-row-actions' : 'row-buttons'}>
         <Button variant="text" theme={kind === 'review' ? 'default' : 'primary'} onClick={() => detail(row)}>详情</Button>
@@ -119,12 +157,12 @@ function ProcessingList({ kind, lines, orders, onModal, narrow }: { kind: Proces
     { colKey: 'row-select', type: 'multiple', width: 40, fixed: 'left', checkProps: ({ row }) => ({ label: <span className="sr-only">选择 {kind === 'orders' ? row.id : row.supplier}</span> }) },
     ...(kind === 'orders' ? [{ colKey: 'id', title: '订单号 / 创建日期', width: 168, cell: ({ row }) => <div className="cell-stack"><Button variant="text" theme="primary" aria-expanded={expanded.includes(row.id)} onClick={() => toggle(row.id)}>{row.id}</Button><span className="secondary">{(row as DemoOrder).date}</span></div> }] satisfies PrimaryTableCol<PurchaseGroup>[] : []),
     { colKey: 'supplier', title: '供应商 / 采购方', width: 238, cell: ({ row }) => <div className="cell-stack"><span className="product-name">{row.supplier || '待补充供应商'}</span><span className="secondary">{row.company}</span></div> },
-    { colKey: 'purchaseType', title: '采购类型', width: 100 },
-    { colKey: 'count', title: '明细 / 数量', align: 'right', width: 122, cell: ({ row }) => <div className="cell-stack align-end"><strong className="numeric">{quantity(sum(row.lines, kind === 'summary' ? remaining : line => line.planned))} 件</strong><span className="secondary">{row.lines.length} 条明细</span></div> },
+    { colKey: 'purchaseType', title: '采购类型', width: 100, cell: ({ row }) => <Tag className="purchase-type-tag" size="small" variant="outline" color={row.purchaseType === '海外采购' ? 'var(--purchase-overseas-color)' : undefined}>{row.purchaseType}</Tag> },
+    { colKey: 'count', title: '数量 / 明细', align: 'right', width: 122, cell: ({ row }) => <div className="cell-stack align-end"><strong className="numeric">{quantity(sum(row.lines, kind === 'summary' ? remaining : line => line.planned))} 件</strong><Button className="purchase-detail-toggle" variant="text" theme="primary" suffix={expanded.includes(row.id) ? <ChevronUpIcon /> : <ChevronDownIcon />} aria-expanded={expanded.includes(row.id)} aria-controls={expanded.includes(row.id) ? `${kind}-details-${kind === 'orders' ? row.id : row.lines[0].id}` : undefined} aria-label={`${expanded.includes(row.id) ? '收起' : '展开'} ${kind === 'orders' ? row.id : `${row.supplier || '待补充供应商'} · ${row.company} · ${row.purchaseType}`} 的采购明细`} onClick={() => toggle(row.id)}>{row.lines.length} 条明细</Button></div> },
     { colKey: 'amount', title: '采购金额', align: 'right', width: 120, cell: ({ row }) => <span className="numeric">{row.lines.some(line => line.price == null) ? '待确认' : money(sum(row.lines, line => (kind === 'summary' ? remaining(line) : line.planned) * (line.price ?? 0)))}</span> },
-    ...(kind === 'orders' ? [{ colKey: 'delivery', title: '预计交期', width: 114, cell: ({ row }) => <span className={(row as DemoOrder).delivery ? 'numeric' : 'secondary'}>{(row as DemoOrder).delivery || '待补充'}</span> }] satisfies PrimaryTableCol<PurchaseGroup>[] : [{ colKey: 'pending', title: '待补项', width: 124, cell: ({ row }) => <span className="secondary">{[...new Set(row.lines.flatMap(missingFields))].join('、') || '—'}</span> }] satisfies PrimaryTableCol<PurchaseGroup>[]),
+    ...(kind === 'orders' ? [{ colKey: 'delivery', title: '预计交期', width: 144, cell: ({ row }) => <label><span className="sr-only">{row.id} 预计交期</span><DatePicker className="order-delivery-picker" size="small" borderless clearable value={(row as DemoOrder).delivery} format="YYYY-MM-DD" valueType="YYYY-MM-DD" placeholder="待补充" onChange={value => onDeliveryChange(row.id, String(value || ''))} /></label> }] satisfies PrimaryTableCol<PurchaseGroup>[] : [{ colKey: 'pending', title: '待补项', width: 124, cell: ({ row }) => <span className="secondary">{[...new Set(row.lines.flatMap(missingFields))].join('、') || '—'}</span> }] satisfies PrimaryTableCol<PurchaseGroup>[]),
     { colKey: 'status', title: '状态', width: 100, cell: ({ row }) => badge(kind === 'summary' ? groupStatus(row) : (row as DemoOrder).orderStatus) },
-    { colKey: 'action', title: '操作', fixed: 'right', width: kind === 'summary' ? 170 : 84, cell: ({ row }) => <div className="row-buttons">{kind === 'summary' && <Button variant="text" theme="primary" disabled={row.lines.some(line => missingFields(line).length > 0)} onClick={() => onModal({ kind: 'preview', rows: row.lines })}>预览订单</Button>}<Button variant="text" theme="primary" icon={expanded.includes(row.id) ? <ChevronUpIcon /> : <ChevronDownIcon />} aria-expanded={expanded.includes(row.id)} aria-label={`${expanded.includes(row.id) ? '收起' : '展开'} ${kind === 'orders' ? row.id : row.supplier}`} onClick={() => toggle(row.id)}>{expanded.includes(row.id) ? '收起' : '明细'}</Button></div> },
+    ...(kind === 'summary' ? [{ colKey: 'action', title: '操作', fixed: 'right', width: 104, cell: ({ row }) => <div className="row-buttons"><Button variant="text" theme="primary" disabled={row.lines.some(line => missingFields(line).length > 0)} onClick={() => onModal({ kind: 'preview', rows: row.lines })}>预览订单</Button></div> }] satisfies PrimaryTableCol<PurchaseGroup>[] : []),
   ];
   function exportRows() {
     const records = selected.length ? pickedLines : grouped ? groupRows.flatMap(group => group.lines) : visible;
@@ -142,16 +180,16 @@ function ProcessingList({ kind, lines, orders, onModal, narrow }: { kind: Proces
         <label><span>采购类型</span><Select value={filters.type} onChange={value => setFilters({ ...filters, type: String(value || '') })} options={options(['国内采购', '海外采购'])} clearable placeholder="全部类型" /></label>
         <label><span>供应商</span><Select value={filters.supplier} onChange={value => setFilters({ ...filters, supplier: String(value || '') })} options={options(suppliers)} filterable clearable placeholder="全部供应商" /></label>
         <label className="date-filter"><span>{kind === 'orders' ? '创建日期' : '申请日期'}</span><DateRangePicker value={filters.dates} onChange={dates => setFilters({ ...filters, dates: dates.map(String) })} clearable /></label>
-      </>} batch={kind === 'review' ? <Button variant="outline" type="button" icon={<CheckIcon />} disabled={!pickedLines.length || blocked} onClick={() => onModal({ kind: 'approve', rows: pickedLines })}>批量通过{pickedLines.length ? `（${pickedLines.length}）` : ''}</Button> : kind === 'summary' ? <Button variant="outline" type="button" disabled={!pickedLines.length || blocked} onClick={() => onModal({ kind: 'preview', rows: pickedLines })}>预览采购订单{selected.length ? `（${selected.length}）` : ''}</Button> : undefined} fileActions={<><CsvImportButton title={processingPages[kind]} data={kind === 'orders' ? { headers: ['采购订单号', '来源采购编码', '品名', '供应商', '订单数量', '采购单价', '预计交期'], rows: shownOrders.flatMap(order => order.lines.map(row => [order.id, row.id, row.product, order.supplier, row.planned, row.price ?? '待补充', order.delivery || '待补充'])) } : { headers: ['采购编码', '品名', '采购类型', '供应商', '计划数量', '已下单', '采购单价'], rows: (grouped ? groupRows.flatMap(group => group.lines) : visible).map(row => [row.id, row.product, row.purchaseType, row.supplier, row.planned, row.ordered, row.price ?? '待补充']) }} />{<Button variant="outline" type="button" icon={<DownloadIcon />} disabled={!count} onClick={exportRows}>{selected.length ? '导出所选' : '导出当前筛选'}</Button>}</>} query={<Button type="submit">查询</Button>} reset={<Button type="button" onClick={reset}>重置</Button>} />
+      </>} batch={kind === 'summary' ? <Button variant="outline" type="button" disabled={!pickedLines.length || blocked} onClick={() => onModal({ kind: 'preview', rows: pickedLines })}>预览采购订单{selected.length ? `（${selected.length}）` : ''}</Button> : undefined} fileActions={<><CsvImportButton title={processingPages[kind]} data={kind === 'orders' ? { headers: ['采购订单号', '来源采购编码', '品名', '供应商', '订单数量', '采购单价', '预计交期'], rows: shownOrders.flatMap(order => order.lines.map(row => [order.id, row.id, row.product, order.supplier, row.planned, row.price ?? '待补充', order.delivery || '待补充'])) } : { headers: ['采购编码', '品名', '采购类型', '供应商', '计划数量', '已下单', '采购单价'], rows: (grouped ? groupRows.flatMap(group => group.lines) : visible).map(row => [row.id, row.product, row.purchaseType, row.supplier, row.planned, row.ordered, row.price ?? '待补充']) }} />{<Button variant="outline" type="button" icon={<DownloadIcon />} disabled={!count} onClick={exportRows}>{selected.length ? '导出所选' : '导出当前筛选'}</Button>}</>} query={<Button type="submit">查询</Button>} reset={<Button type="button" onClick={reset}>重置</Button>} />
       
     </form></section>
     <section className="list-panel" aria-label={`${processingPages[kind]}列表`}>
       <div className="list-heading"><Tabs value={stage} onChange={value => { setStage(String(value)); setPage(1); setSelected([]); }}>{stages.map(value => <Tabs.TabPanel key={value} value={value} label={<button className="tab-label" aria-pressed={value === stage}>{value}<span className="tab-count">{stageCount(value)}</span></button>} />)}</Tabs>
-      <div className={`list-meta${selected.length ? ' has-selection' : ''}`}><div className="selection-summary" aria-live="polite">{selected.length ? <>已选 <strong>{selected.length}</strong> {grouped ? '组' : '条'}<Button variant="text" theme="primary" onClick={() => setSelected([])}>取消选择</Button></> : <><strong>{count}</strong> {kind === 'orders' ? '个订单' : kind === 'summary' ? '个采购分组' : '条记录'}</>}<span className="toolbar-hint">{kind === 'review' ? '通过复审后进入采购汇总' : kind === 'summary' ? '按采购类型、采购方与供应商分组' : kind === 'orders' ? '展开查看商品与来源申请' : '追踪申请到下单的数量变化'}</span></div></div></div>
+      <div className={`list-meta${selected.length ? ' has-selection' : ''}`}><div className="selection-summary" aria-live="polite">{selected.length ? <>已选 <strong>{selected.length}</strong> {grouped ? '组' : '条'}{kind === 'review' && <>，共 <strong>{quantity(sum(pickedLines, row => row.planned))}</strong> 件货</>}<Button variant="text" theme="primary" onClick={() => setSelected([])}>取消选择</Button></> : <><strong>{count}</strong> {kind === 'orders' ? '个订单' : kind === 'summary' ? '个采购分组' : '条记录'}{kind === 'review' && <>，共 <strong>{quantity(sum(visible, row => row.planned))}</strong> 件货</>}</>}<span className="toolbar-hint">{kind === 'review' ? '通过复审后进入采购汇总' : kind === 'summary' ? '按采购类型、采购方与供应商分组' : kind === 'orders' ? '展开查看商品与来源申请' : '追踪申请到下单的数量变化'}</span></div></div></div>
       {blocked && (kind === 'review' || kind === 'summary') && <Alert className="selection-alert" theme="warning" message="所选记录有待补资料，请先补齐或取消选择这些记录。" />}
-      <div className={`table-scroll processing-table${kind === 'review' ? ' review-table' : ''}`} role="region" aria-label={`${processingPages[kind]}表格，可横向滚动`} tabIndex={0}>
+      <div className={`table-scroll processing-table${grouped ? ' purchase-group-table' : ''}${kind === 'review' ? ' review-table' : kind === 'summary' ? ' summary-table' : ''}`} role="region" aria-label={`${processingPages[kind]}表格，可横向滚动`} tabIndex={0}>
         {grouped ? <PrimaryTable<PurchaseGroup> rowKey="id" data={groupRows} columns={groupColumns} size="small" hover tableLayout="fixed" selectedRowKeys={selected} onSelectChange={setSelected} expandIcon={false} expandedRowKeys={expanded}
-          expandedRow={({ row }) => <div className="expanded-products"><LineItems rows={row.lines} mode={kind === 'summary' ? 'summary' : 'order'} onDetail={detail} /></div>}
+          expandedRow={({ row }) => <div className="purchase-group-details" id={`${kind}-details-${kind === 'orders' ? row.id : row.lines[0].id}`}><LineItems rows={row.lines} mode={kind === 'summary' ? 'summary' : 'order'} onDetail={detail} onEdit={kind === 'summary' ? line => onModal({ kind: 'edit', row: line }) : undefined} onHistory={line => onModal({ kind: 'history', row: lines.find(source => source.id === line.id) ?? line })} /></div>}
           pagination={{ current: page, pageSize, total: count, pageSizeOptions: [10, 20, 50], showJumper: true }} onPageChange={info => { setPage(info.current); setPageSize(info.pageSize); }}
           empty={<Empty title="没有符合条件的记录" description="调整条件，或重置筛选查看全部记录。" action={<Button variant="outline" onClick={reset}>重置筛选</Button>} />} /> :
           <PrimaryTable<PurchaseLine> rowKey="id" data={visible} columns={columns} size="small" hover tableLayout="fixed" selectedRowKeys={selected} onSelectChange={setSelected}
@@ -193,7 +231,7 @@ function ReviewEditor({ row, onClose, onSave }: { row: PurchaseLine; onClose: ()
     if (issue) { setError(issue[1]); requestAnimationFrame(() => document.getElementById(issue[0])?.focus()); return; }
     onSave(draft);
   }
-  return <PreviewDialog title="修改复审资料" onClose={close} footer={<div className="form-footer"><span>{discard ? '放弃后不会保存本次修改' : dirty ? '有未保存的修改' : '仅更新本地示例'}</span><div>{discard ? <><Button variant="outline" onClick={() => setDiscard(false)}>继续编辑</Button><Button theme="danger" onClick={onClose}>放弃修改</Button></> : <><Button variant="outline" onClick={close}>取消</Button><Button theme="primary" onClick={save}>保存资料</Button></>}</div></div>}>
+  return <PreviewDialog title={row.review ? '修改复审资料' : '处理采购明细'} onClose={close} footer={<div className="form-footer"><span>{discard ? '放弃后不会保存本次修改' : dirty ? '有未保存的修改' : '仅更新本地示例'}</span><div>{discard ? <><Button variant="outline" onClick={() => setDiscard(false)}>继续编辑</Button><Button theme="danger" onClick={onClose}>放弃修改</Button></> : <><Button variant="outline" onClick={close}>取消</Button><Button theme="primary" onClick={save}>保存资料</Button></>}</div></div>}>
     <div className="review-editor">
       <div className="editor-product"><strong>{row.product}</strong><span className="secondary">{row.id} · {row.color} · {row.site}</span></div>
       {discard && <div role="alert"><Alert theme="warning" message="有未保存的修改。继续编辑，或在底部选择放弃修改。" /></div>}

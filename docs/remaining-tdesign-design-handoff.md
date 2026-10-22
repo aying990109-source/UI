@@ -25,17 +25,29 @@
 - **帮助与助手。** 帮助按任务搜索并阅读前提、步骤、结果及边界；助手只匹配固定本地说明，回复附可点引用，未知问题明确未知。无模型调用、业务数据读取、真实会话历史或来源授权的假模拟。正式规则参见 [帮助设计](../../erp/docs/help-documentation-design.md)与[助手链路](../../erp/docs/agent-workflows.md)。
 - **验证。** `workbench-preview-data.test.mjs`检查个人状态、建议选日、活动版本与候选；`support-preview-data.test.mjs`检查引用及未知回答。浏览器覆盖关联活动直接建待办、未来日期/来源筛选、资料草稿取消与保存、帮助阅读、助手引用、桌面/窄屏键盘路径。
 
-## 独立登录页补充（2026-10-18）
+## 独立登录页补充（2026-10-22）
 
 以 [LoginPreview](../scripts/fixtures/purchase-request-tdesign/LoginPreview.tsx) 替换工作台内部的登录示例，沿用 TDesign。直接入口为 `index.html#login`；2026-10-19 起统一从顶部头像菜单登录或退出，不再放入侧栏和个人资料操作区。[凭据规则](../scripts/fixtures/purchase-request-tdesign/login-preview-data.ts)仅同步校验固定合成账号；登录态仍为内存演示，业务样板不受其鉴权。凭据不持久化、不发请求，生产认证、ALTCHA 与权限逻辑未改动。
 
-用户已确认[静态效果稿](../.impeccable/review/purchase-tdesign/login-static/approved.png)，在 `codex/tdesign-login-static` 实现，无需重新选择设计方向。全页采用白色/浅灰底、左侧无外框表单和右侧大型立体插图；标题为两行“登录到 / 企业运营工作台”。[局部样式](../scripts/fixtures/purchase-request-tdesign/login-preview.css)按用户对输入框过大的反馈，将桌面表单固定为 400px 宽、输入和提交控件固定为 40px 高、输入文字固定为 14px，标题保留 34–48px；不超过 1050px 时隐藏插图、居中 400px 表单，不超过 680px 时使用 24px 边距、30px 标题、48px 输入及提交控件，其他主要操作目标至少 44px。以上均为本页面选择，不更新全局 `DESIGN.md`、`PRODUCT.md` 或设计令牌。
+2026-10-22 用户在本次对话确认 [workbench 效果稿](design-references/login-workbench-20261022/approved.png)，并明确要求开始修改登录页；其[来源和适用范围](design-references/login-workbench-20261022/README.md)随 Git 保存。当前方案取代 2026-10-20 的“左侧 52% 纯蓝大标识、右侧表单”及此前立体插图方案。新页面左侧约 65% 为登录区，右侧约 35% 为蓝灰至深黑静态背景。左侧 XD 与小写 `workbench` 仅出现一次，标题为“欢迎回来”；品牌、标题、说明、字段和按钮沿同一左边线排列。右侧固定两行文案为“奇迹，从来不只在 / 它发生的瞬间。”，使用普通字重，不署名、不添加其他口号。
 
-真实 TDesign Input、Button 与官方图标承担交互，品牌复用既有 SVG；保留视觉隐藏且关联输入的标签、显示/隐藏密码、Enter 提交、行内错误、错误字段聚焦及失败后保留输入。“登录遇到问题？”展开帮助和演示凭据，仍通过显式按钮填入。成功进入首页、退出清空登录字段，合成校验和已挂载业务页的内存状态行为不变。[背景 WebP](../scripts/fixtures/purchase-request-tdesign/assets/login-background.webp)为 1672×941、44,674 字节，由批准稿生成背景后仅作编码转换；[来源侧记](../scripts/fixtures/purchase-request-tdesign/assets/login-background.webp.json)保留准确提示词与参考图。
+[局部样式](../scripts/fixtures/purchase-request-tdesign/login-preview.css)以 400–470px 的响应式表单宽度还原效果稿比例，输入与提交按钮均为 48px，输入文字为 14px；品牌字为 24px，桌面标题为 32px。提交按钮使用既有品牌蓝 `#193e68`，浅色表单沿用 TDesign 容器和文字变量；深色表单沿用现有主题变量，品牌文字与按钮改为浅蓝，并为按钮使用深蓝文字保证对比。主题切换位于左侧登录区右上角。900px 及以下隐藏右侧区域，680px 及以下保留 24px 边距、完整品牌名及至少 44px 的主题切换、密码显隐和次级入口。帮助内容自然撑高页面，矮屏可以滚动；不裁切表单、不修改导航或认证规则。所有外观覆盖均限于登录页，不更新全局设计令牌。
 
-本轮[验证记录](../.impeccable/review/purchase-tdesign/login-static/validation.json)记录 fixture 类型检查、登录/支持规则共 2 项和生产构建通过；浏览器覆盖错误及聚焦、帮助及填入凭据、Tab/Space/Enter、登录、退出清空和旧动态 URL。1672×941、1440×810、1058×884、390×844、320×844 截图有效且无横向溢出。初版独立 [finish review](../.impeccable/review/purchase-tdesign/login-static/review.md)结论为 **ship**，无实质缺陷；初版自动图像比较约 92% 仅作辅助证据，不覆盖后续紧凑尺寸调整。既有 Zod/包体积警告及 9 项局部字号提示保留；无关全局 shipping 状态的 `COMP_ROUND_OPEN` 不构成检测器全绿。未实测屏幕阅读器、真实软键盘、跨浏览器或生产认证。本轮 scoped `verify:context` 已通过：0 errors、0 warnings。
+真实 TDesign Input、Button 与官方图标承担交互，品牌复用既有 SVG；账号、密码标签常驻可见并继续关联输入。保留显示/隐藏密码、Enter 提交、行内错误、错误字段聚焦及失败后保留输入。“登录遇到问题？”展开帮助和演示凭据，仍通过显式按钮填入。成功进入工作台、退出清空登录字段，合成校验和已挂载业务页的内存状态行为不变。新增 [静态背景 WebP](../scripts/fixtures/purchase-request-tdesign/assets/login-atmosphere.webp)由确认稿右侧背景生成无文字版本，来源及提示词见[资源记录](../scripts/fixtures/purchase-request-tdesign/assets/login-atmosphere.webp.json)；背景由 CSS 装饰层显示，励志文案保留为真实文本。[原立体背景](../scripts/fixtures/purchase-request-tdesign/assets/login-background.webp)及其[来源侧记](../scripts/fixtures/purchase-request-tdesign/assets/login-background.webp.json)作为历史资源保留，当前页面不再加载。
 
-[早期验证](../.impeccable/review/purchase-tdesign/login-validation.json)与[早期评审](../.impeccable/review/purchase-tdesign/login-review.md)仅作为未变行为的历史证据，不再代表当前视觉稿；[页面构建记录](../.impeccable/surfaces/tdesign-login.md)保存当前局部设计约定及截图链接。
+2026-10-22 实现验证：`pnpm build`（含类型检查）通过，仍有项目既有的 500 kB 大包提示；现有登录和主题相关 5 项测试通过。Chrome 浏览器覆盖 1440×900、1058×884、900×800、390×844、320×640 的浅色与深色截图，未发现横向溢出，品牌名均只出现一次；跟随系统的深浅切换、减少动态效果、320px 展开帮助、1058×600 矮屏展开帮助及滚动访问通过。交互复测覆盖空账号/密码及聚焦、错误凭据与输入保留、Tab/Space 密码显隐、帮助展开与显式填入、Enter 登录进入工作台、退出清空、旧入口与浏览样板；无浏览器脚本错误。测试过程中确认 TDesign 切换密码类型后会把焦点送回密码框，键盘复测按 Tab 返回显隐按钮的实际路径验证，未改变该行为。截图与交互结果位于 `.review/login-workbench-20261022/`，对应 `design/login-workbench` 的本次未提交工作树，源码校验值见该目录 `source-hashes.json`；截图按页面、主题、尺寸命名，不替代已确认效果稿。未修改共享逻辑，因此未重复运行全仓测试；未测真实手机软键盘、屏幕阅读器或其他浏览器。
+
+2026-10-22 纵向滚动修复：初次实现验证仅断言横向无溢出，未覆盖默认表单在矮窗口的纵向高度。复现确认，桌面固定纵向留白使页面最低约 789px，在 1440×720 窗口多出 69px。窗口高度不超过 800px 时，登录页局部收紧留白：工具栏及表单外层上下各 8px、品牌和说明下间距各 24px、提交按钮上间距 20px、页脚上下各 12px；控件仍高 48px，正常高窗口保留原布局。未隐藏或裁切溢出，展开帮助及极矮窗口仍可滚动访问完整内容。
+
+修复验证：先用 1440×720 的纵向断言复现失败，再运行 Chrome 共 30 项尺寸与状态检查，均通过。浅色和深色覆盖 1440×900、801/800/789/768/720px 高度边界、1280×720、1058×600、900×600、390×844/640、320×640，默认表单及页脚均在窗口内，无横向或纵向溢出；320×480、320×640 展开帮助及 1058×600 展开帮助仍可滚动到底部。错误字段聚焦、收起帮助、Enter 登录通过，无浏览器脚本错误。桌面、窄屏及深浅主题截图已核对；`pnpm build` 再次通过，仍仅有既有大包提示。本次只修改登录页局部 CSS，未重复运行全仓逻辑测试。新增证据保存在 `.review/login-workbench-20261022/scroll-regression-results.json` 和 `scroll-fixed-{theme}-{width}x{height}.png`，源码校验值见 `source-hashes-scroll-fixed.json`；保留原稿及修复前证据。
+
+历史纯色品牌方案验证（不代表当前视觉）：类型检查与构建通过，1280px 和 1058px 桌面、390px 手机及深浅主题已检查；截图在 `.impeccable/review/login-brand-20261020/`。机械检测保留原有 8 项局部字号建议；表单逻辑未改，沿用下段已完成的 108 项测试及交互验证。
+
+2026-10-20 验证：`pnpm build`（含类型检查）与 `pnpm test` 的 108 项测试通过；浏览器确认空账号反馈与焦点、帮助展开、演示账号填入、Space 切换密码显隐、Enter 登录进入工作台，以及深浅主题。1280×720、1058×884、900×800、390×844、320×640 下无横向溢出；1280×600 和 320px 宽展开帮助可滚动访问。截图保存在本地 `.impeccable/review/login-split-20261020/`。机械检测保留 8 项登录页局部字号及 1 项沿用深色遮罩颜色提示；无关 shipping 的旧 `COMP_ROUND_OPEN` 不属于本次布局修改。构建仍有既有大包体积警告；未测真实手机软键盘、屏幕阅读器和跨浏览器。
+
+2026-10-18 历史[验证记录](../.impeccable/review/purchase-tdesign/login-static/validation.json)记录 fixture 类型检查、登录/支持规则共 2 项和生产构建通过；浏览器覆盖错误及聚焦、帮助及填入凭据、Tab/Space/Enter、登录、退出清空和旧动态 URL。1672×941、1440×810、1058×884、390×844、320×844 截图有效且无横向溢出。初版独立 [finish review](../.impeccable/review/purchase-tdesign/login-static/review.md)结论为 **ship**，无实质缺陷；初版自动图像比较约 92% 仅作历史辅助证据，不覆盖后续紧凑尺寸调整或双栏布局。
+
+[早期验证](../.impeccable/review/purchase-tdesign/login-validation.json)、[早期评审](../.impeccable/review/purchase-tdesign/login-review.md)与[早期页面构建记录](../.impeccable/surfaces/tdesign-login.md)仅作为历史证据，不再代表当前视觉稿；当前设计依据为本节 2026-10-22 确认方案。
 
 ## F 预留功能与文件入口
 

@@ -20,13 +20,13 @@ export function CsvImportButton({ title, data }: { title: string; data: FileTabl
   </>;
 }
 
-export function ImportPreviewDialog({ title, data, format = 'CSV', onClose }: { title: string; data: FileTable; format?: 'CSV' | 'XLSX'; onClose: () => void }) {
+export function ImportPreviewDialog({ title, data, format = 'CSV', previewColumnCount = 3, uniqueFirstColumn = true, onClose }: { title: string; data: FileTable; format?: 'CSV' | 'XLSX'; previewColumnCount?: number; uniqueFirstColumn?: boolean; onClose: () => void }) {
   const [stage, setStage] = useState<'upload' | 'selected' | 'success' | 'error'>('upload');
   const [dragging, setDragging] = useState(false), [errorsOnly, setErrorsOnly] = useState(false);
   const checked = stage === 'success' || stage === 'error';
   // These are presentation states only: no file is read, validated, or submitted.
   const changeStage = (next: typeof stage) => { setStage(next); setErrorsOnly(false); setDragging(false); };
-  const headers = data.headers.slice(0, 3);
+  const headers = data.headers.slice(0, previewColumnCount);
   const samples = data.rows.length ? data.rows.slice(0, 3) : Array.from({ length: 3 }, (_, i) => headers.map(header => `${header}示例 ${i + 1}`));
   const rows = samples.map((sample, index) => {
     const cells = sample.slice(0, headers.length);
@@ -34,7 +34,7 @@ export function ImportPreviewDialog({ title, data, format = 'CSV', onClose }: { 
     if (stage === 'error' && index === Math.min(1, samples.length - 1)) {
       cells[0] = '';
       problem = `${headers[0]}不能为空`;
-    } else if (stage === 'error' && samples.length > 2 && index === samples.length - 1) {
+    } else if (stage === 'error' && uniqueFirstColumn && samples.length > 2 && index === samples.length - 1) {
       cells[0] = samples[0][0];
       problem = `${headers[0]}与第 2 行重复`;
     }

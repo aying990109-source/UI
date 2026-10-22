@@ -5,7 +5,7 @@ export const processingPages = { review: '待复审', demand: '采购需求明�
 export type ProcessingPage = keyof typeof processingPages;
 export type PurchaseLine = RequestRow & {
   review: boolean; supplier: string; company: string; price: number | null;
-  planned: number; ordered: number; executionCarton: number | null; adjustmentReason: string;
+  approved: number; planned: number; ordered: number; executionCarton: number | null; adjustmentReason: string;
 };
 export type PurchaseGroup = { id: string; supplier: string; company: string; purchaseType: string; lines: PurchaseLine[] };
 export type DemoOrder = PurchaseGroup & { date: string; delivery: string; orderStatus: string };
@@ -19,7 +19,8 @@ export const purchaseLines: PurchaseLine[] = sampleRows.slice(0, 18).map((row, i
   return {
   ...row, review: i < 6, supplier: i === 1 ? '' : suppliers[i % 3], company: companies[i % 2],
   price: i === 2 ? null : [18.5, 32, 9.8, 12.6, 28, 46.5, 21, 8.4][i % 8],
-  planned: row.quantity, ordered, timeline,
+  // 示例审批全额通过；批准数量独立于后续计划调整。
+  approved: row.quantity, planned: row.quantity, ordered, timeline,
   executionCarton: row.carton, adjustmentReason: '',
   };
 });
@@ -29,7 +30,7 @@ export function saveReviewDetails(previous: PurchaseLine, next: PurchaseLine): P
   const changes = (Object.keys(fields) as (keyof typeof fields)[])
     .filter(key => previous[key] !== next[key])
     .map(key => `${fields[key]}：${previous[key] === '' || previous[key] == null ? '未填写' : previous[key]} → ${next[key] === '' || next[key] == null ? '未填写' : next[key]}`);
-  return { ...next, timeline: changes.length ? [...previous.timeline, createEvent('修改复审资料', '演示用户', changes.join('\n'))] : previous.timeline };
+  return { ...next, approved: previous.approved, timeline: changes.length ? [...previous.timeline, createEvent(previous.review ? '修改复审资料' : '处理汇总明细', '演示用户', changes.join('\n'))] : previous.timeline };
 }
 
 export const missingFields = (row: PurchaseLine) => [
@@ -51,6 +52,23 @@ export function groupLines(rows: PurchaseLine[]): PurchaseGroup[] {
     groups.set(id, group);
   }
   return [...groups.values()];
+}
+
+export function groupTransportLines(rows: PurchaseLine[]) {
+  const groups = new Map<string, { label: string; lines: PurchaseLine[] }>();
+  for (const row of rows) {
+    const label = row.stockPath === '国内备货' ? '不适用' : row.transport || '未填写';
+    const group = groups.get(label) ?? { label, lines: [] };
+    group.lines.push(row);
+    groups.set(label, group);
+  }
+  return [...groups.values()].sort((a, b) => a.label.localeCompare(b.label, 'zh-Hans-CN')).map(group => ({
+    ...group,
+    approved: sum(group.lines, row => row.approved),
+    planned: sum(group.lines, row => row.planned),
+    fba: sum(group.lines, row => row.stockingType === 'FBA' ? row.planned : 0),
+    fbm: sum(group.lines, row => row.stockingType === 'FBM' ? row.planned : 0),
+  }));
 }
 
 export const initialOrders: DemoOrder[] = groupLines(purchaseLines.filter(row => row.ordered > 0).map(row => ({ ...row, planned: row.ordered }))).map((group, i) => ({

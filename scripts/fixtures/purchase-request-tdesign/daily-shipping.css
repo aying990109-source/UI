@@ -1,0 +1,13 @@
+.daily-shipping-table td { font-variant-numeric: tabular-nums; }
+.daily-status-button.t-button { height: auto; padding: 0; }
+.daily-filter-notice { margin-top: 12px; }
+.daily-shipping-detail { --daily-label-width: 116px; }
+.daily-shipping-detail .shipping-confirm-list .t-button { max-width: 100%; height: auto; white-space: normal; }
+.daily-shipping-detail .shipping-confirm-list .t-button__text { white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 650px) {
+  .daily-shipping-table .t-table__content > table { min-width: 0; }
+  .daily-shipping-table .row-buttons { flex-direction: column; align-items: flex-start; }
+  .daily-compact-order, .daily-compact-order .t-space-item { min-width: 0; max-width: 100%; }
+  .daily-shipping-table .t-pagination__total, .daily-shipping-table .t-pagination__select { display: none; }
+  .daily-shipping-detail { --daily-label-width: 102px; }
+}

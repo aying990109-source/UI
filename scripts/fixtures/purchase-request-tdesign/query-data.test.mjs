@@ -32,6 +32,9 @@ test('order results sort stably and logistics disagreement or absence never asse
   assert.equal(data.trackingConflict({ ...orders[0], tracking: [{ number: 'same' }, { number: 'same' }] }), false);
   assert.equal(orders[2].sourcePrice, '0'); assert.equal(orders[2].tracking.length, 0);
   assert.equal('shipmentStatus' in orders[2], false); assert.match(orders[2].logisticsNote, /不代表未发货/);
+  assert.equal(orders[2].shippingChannel, ''); assert.equal(orders[2].expectedArrival, '');
+  assert.deepEqual(data.trackingGroups(orders[0]).map(item => item.number), ['DEMO-TRACK-1', 'DEMO-TRACK-OTHER']);
+  assert.deepEqual(data.trackingGroups(orders[3])[0].sources, ['原表运单号', '原表自动读取列']);
 });
 
 test('pricing requires the complete name, preserves internal spacing, and filters active country/source combinations', () => {

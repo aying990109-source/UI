@@ -1,0 +1,15 @@
+{
+  "purpose": "Synthetic UI-only after-sales image attachments; no real customer evidence.",
+  "generator": "Built-in image_gen",
+  "date": "2026-10-21",
+  "assets": [
+    {
+      "file": "after-sale-product-example.png",
+      "prompt": "Use case: product-mockup. Asset type: small sample attachment in an internal after-sales UI prototype. Generate one square 1024x1024 natural smartphone photograph of a cream-white plastic folding storage bin on a light gray home table, front three-quarter view, with a visible small crack at the upper right corner of the bin. The entire bin fits within the frame, soft daylight, realistic ordinary user evidence photo, no hands, no people, no brand names, no labels, no text, no arrows, no graphics, no watermark. Background quiet and uncluttered. This is synthetic demonstration data, not an actual claim."
+    },
+    {
+      "file": "after-sale-package-example.png",
+      "prompt": "Use case: product-mockup. Asset type: small sample attachment in an internal after-sales UI prototype. Generate one square 1024x1024 natural smartphone photograph of a plain closed brown corrugated shipping carton on a light gray home table, three-quarter view, with a visibly dented top right corner and slightly wrinkled brown packing tape. The entire box fits within the frame, soft daylight, realistic ordinary user evidence photo, no hands, no people, no shipping labels, no brand names, no addresses, no text, no arrows, no graphics, no watermark. Background quiet and uncluttered. This is synthetic demonstration data, not an actual claim."
+    }
+  ]
+}
